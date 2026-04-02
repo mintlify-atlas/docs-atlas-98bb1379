@@ -1,0 +1,71 @@
+---
+title: 'Serving modes'
+description: 'Control how dufs responds to directory requests: directory listing, index.html, or SPA fallback.'
+---
+
+Dufs has three rendering modes that change how it handles requests for directories. The default mode shows a directory listing. The other three modes are suited to static websites and single-page applications.
+
+## Default: directory listing
+
+Without any render flag, dufs returns an interactive directory listing for every directory request. This is the standard file-server behavior.
+
+```sh
+dufs
+```
+
+Use this when you want to browse, upload, or share files.
+
+## `--render-index`: serve index.html or 404
+
+When `--render-index` is set, dufs serves the `index.html` file found in the requested directory. If no `index.html` exists, it returns a `404 Not Found` response.
+
+```sh
+dufs --render-index
+```
+
+**Use this for:** static websites where every directory is expected to have its own `index.html`.
+
+<Note>
+  Directory listing is disabled in this mode. Requesting a directory without an `index.html` returns 404, not a file list.
+</Note>
+
+## `--render-try-index`: serve index.html or fall back to listing
+
+When `--render-try-index` is set, dufs tries to serve `index.html` first. If none is found, it falls back to the directory listing.
+
+```sh
+dufs --render-try-index
+```
+
+**Use this for:** documentation sites or mixed content directories where some folders have landing pages and others do not.
+
+## `--render-spa`: single-page application mode
+
+When `--render-spa` is set, dufs routes all requests that would otherwise return `404` to the root `index.html`. This is the standard behavior required by client-side routers in frameworks like React, Vue, and Angular.
+
+```sh
+dufs --render-spa
+```
+
+**Use this for:** React, Vue, Angular, or any other SPA where the client-side router handles URL paths that do not correspond to real files.
+
+<Tip>
+  When serving a built SPA, do not pass `--allow-archive` (it is disabled by default) to prevent users from downloading your source assets as a zip.
+</Tip>
+
+## Summary
+
+| Flag                | Directory has `index.html` | Directory has no `index.html` |
+| ------------------- | -------------------------- | ----------------------------- |
+| _(none)_            | Directory listing          | Directory listing             |
+| `--render-index`    | Serves `index.html`        | 404                           |
+| `--render-try-index`| Serves `index.html`        | Directory listing             |
+| `--render-spa`      | Serves `index.html`        | Serves root `index.html`      |
+
+## Environment variables
+
+| Flag                 | Env var                    |
+| -------------------- | -------------------------- |
+| `--render-index`     | `DUFS_RENDER_INDEX=true`   |
+| `--render-try-index` | `DUFS_RENDER_TRY_INDEX=true` |
+| `--render-spa`       | `DUFS_RENDER_SPA=true`     |

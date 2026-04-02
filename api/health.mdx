@@ -1,0 +1,55 @@
+---
+title: 'Health check'
+description: 'Lightweight endpoint for verifying that the dufs server is running.'
+---
+
+## Health check endpoint
+
+```
+GET /__dufs__/health
+```
+
+Returns `200 OK` with a JSON body when the server is up and accepting requests.
+
+**No authentication is required.** The endpoint is accessible even when `--auth` rules are configured.
+
+```bash
+curl http://127.0.0.1:5000/__dufs__/health
+```
+
+Response:
+
+```json
+{"status":"OK"}
+```
+
+---
+
+## Docker health check
+
+Use the endpoint as a `HEALTHCHECK` instruction in a `Dockerfile`:
+
+```dockerfile
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:5000/__dufs__/health || exit 1
+```
+
+Or in a `docker-compose.yml`:
+
+```yaml
+services:
+  dufs:
+    image: sigoden/dufs
+    ports:
+      - "5000:5000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/__dufs__/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+```
+
+<Tip>
+  Load balancers and orchestrators (Kubernetes liveness probes, AWS ALB health checks, etc.) can poll this endpoint to determine whether to route traffic to the instance.
+</Tip>

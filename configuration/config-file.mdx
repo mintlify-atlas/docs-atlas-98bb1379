@@ -1,0 +1,165 @@
+---
+title: "Config file"
+description: "Configure Dufs with a YAML file instead of command-line flags."
+---
+
+Dufs accepts a YAML configuration file. Pass the path with `-c` / `--config`:
+
+```bash
+dufs --config /etc/dufs/config.yaml
+dufs -c config.yaml
+```
+
+## Precedence
+
+CLI flags always override values set in the config file. The config file, in turn, overrides built-in defaults. Environment variables behave the same as CLI flags — they take precedence over the config file.
+
+```
+CLI flags / env vars  >  config file  >  built-in defaults
+```
+
+## Key naming
+
+Config keys use kebab-case and match the long form of each CLI flag. For example, `--allow-upload` becomes `allow-upload`, and `--tls-cert` becomes `tls-cert`.
+
+---
+
+## Minimal example
+
+A minimal config file that serves a specific directory on a custom port with upload enabled:
+
+```yaml config.yaml
+serve-path: /home/user/files
+port: 8080
+allow-upload: true
+```
+
+---
+
+## Full example
+
+The following file shows every available configuration key:
+
+```yaml config.yaml
+# Path to serve. Defaults to the current directory.
+serve-path: '.'
+
+# Bind address(es). Accepts IP addresses or Unix socket paths.
+# Can be a single value or a list.
+bind: 0.0.0.0
+
+# TCP port to listen on.
+port: 5000
+
+# Serve content under a URL prefix (useful behind a reverse proxy).
+path-prefix: /dufs
+
+# Hide files/directories matching these glob patterns from listings.
+# Globs match names only, not full paths.
+hidden:
+  - tmp
+  - '*.log'
+  - '*.lock'
+
+# Access control rules. Format: user:pass@/path:permission
+# Use :rw for read-write, omit or use :ro for read-only.
+# Omit the account part to define anonymous access.
+# Note: '@/' requires quoting per the YAML spec.
+auth:
+  - admin:admin@/:rw
+  - user:pass@/src:rw,/share
+  - '@/'
+
+# Enable all operations (upload, delete, search, symlink, archive, hash).
+allow-all: false
+
+# Granular permission flags. Each defaults to false.
+allow-upload: true
+allow-delete: true
+allow-search: true
+allow-symlink: true
+allow-archive: true
+allow-hash: true
+
+# Set Access-Control-Allow-Origin: * on all responses.
+enable-cors: true
+
+# Serve index.html for directory requests (returns 404 if not found).
+render-index: true
+
+# Serve index.html for directory requests (falls back to listing if not found).
+render-try-index: true
+
+# Serve a Single Page Application — unknown paths rewrite to index.html.
+render-spa: true
+
+# Custom UI assets directory. Must contain index.html.
+assets: ./assets/
+
+# HTTP log format. Set to empty string to disable logging.
+# Available variables: $remote_addr, $remote_user, $request, $status, $http_<name>
+log-format: '$remote_addr "$request" $status $http_user_agent'
+
+# Write HTTP logs to a file instead of stdout/stderr.
+log-file: ./dufs.log
+
+# Zip compression level for folder downloads: none, low, medium, high.
+compress: low
+
+# TLS certificate and private key paths. Both required to enable HTTPS.
+tls-cert: tests/data/cert.pem
+tls-key: tests/data/key_pkcs1.pem
+```
+
+---
+
+## Notes on specific keys
+
+### `bind`
+
+Accepts either a single string or a YAML list:
+
+```yaml
+# Single address
+bind: 0.0.0.0
+
+# Multiple addresses
+bind:
+  - 127.0.0.1
+  - 192.168.8.10
+```
+
+On Unix systems you can also specify a socket file path:
+
+```yaml
+bind: /tmp/dufs.socket
+```
+
+### `hidden`
+
+Accepts a comma-separated string or a YAML list:
+
+```yaml
+# Comma-separated string
+hidden: tmp,*.log,*.lock
+
+# YAML list
+hidden:
+  - tmp
+  - '*.log'
+  - '*.lock'
+```
+
+### `auth`
+
+Each rule is a string in the format `user:pass@/path:permission`. Anonymous rules (no account) must be quoted because the bare `@` character has special meaning in YAML:
+
+```yaml
+auth:
+  - admin:admin@/:rw
+  - '@/'  # quotes required
+```
+
+### `tls-cert` and `tls-key`
+
+Both keys must be set together to enable HTTPS. Providing only one causes Dufs to exit with an error.

@@ -1,0 +1,224 @@
+---
+title: "Examples"
+description: "Real-world usage examples for serving files, configuring access, and working with the Dufs HTTP API using curl."
+---
+
+## Serving files
+
+### Serve current working directory (read-only)
+
+Run Dufs in any directory with no arguments. Files are served read-only by default.
+
+```bash
+dufs
+```
+
+Open [http://localhost:5000](http://localhost:5000) to browse the directory.
+
+### Allow all operations
+
+Enable uploading, deleting, searching, archiving, and hashing with a single flag:
+
+```bash
+dufs -A
+```
+
+### Only allow upload
+
+Permit uploads without enabling delete or other write operations:
+
+```bash
+dufs --allow-upload
+```
+
+### Serve a specific directory
+
+Pass a path to serve a directory other than the current one:
+
+```bash
+dufs Downloads
+```
+
+### Serve a single file
+
+Point Dufs at a single file to serve only that file:
+
+```bash
+dufs linux-distro.iso
+```
+
+### Serve a SPA (React, Vue, etc.)
+
+Use `--render-spa` to redirect all unmatched routes to `index.html`, which is required by client-side routers:
+
+```bash
+dufs --render-spa
+```
+
+### Serve a static website with index.html
+
+Use `--render-index` to serve `index.html` when a directory is requested. Returns 404 if `index.html` is not found:
+
+```bash
+dufs --render-index
+```
+
+<Tip>
+  Use `--render-try-index` instead to fall back to the directory listing when `index.html` is not found, rather than returning 404.
+</Tip>
+
+## Authentication and network
+
+### Require username and password
+
+Use `-a` to add an auth rule. The format is `user:pass@path:permission`.
+
+```bash
+dufs -a admin:123@/:rw
+```
+
+This requires the username `admin` with password `123` and grants read-write access to all paths.
+
+<Note>
+  Auth permissions are capped by the global flags you pass. If you don't include `--allow-upload`, no user can upload even with `:rw` permission.
+</Note>
+
+### Listen on a specific host and port
+
+Bind to a specific interface and port with `-b` and `-p`:
+
+```bash
+dufs -b 127.0.0.1 -p 80
+```
+
+This restricts access to localhost only, on port 80.
+
+### Listen on a Unix socket
+
+Pass a socket path to `-b` to listen on a Unix domain socket instead of a TCP port:
+
+```bash
+dufs -b /tmp/dufs.socket
+```
+
+### Use HTTPS
+
+Provide your TLS certificate and private key:
+
+```bash
+dufs --tls-cert my.crt --tls-key my.key
+```
+
+Dufs will serve over HTTPS on the configured port (default 5000).
+
+## curl API examples
+
+Dufs exposes a REST-style HTTP API. You can use `curl` or any HTTP client to manage files.
+
+### Upload a file
+
+Use `-T` to upload a file via PUT:
+
+```bash
+curl -T path-to-file http://127.0.0.1:5000/new-path/path-to-file
+```
+
+### Download a file
+
+```bash
+curl http://127.0.0.1:5000/path-to-file
+```
+
+To retrieve the SHA-256 hash of a file instead of its contents:
+
+```bash
+curl http://127.0.0.1:5000/path-to-file?hash
+```
+
+### Download a folder as zip
+
+```bash
+curl -o path-to-folder.zip http://127.0.0.1:5000/path-to-folder?zip
+```
+
+### Delete a file or folder
+
+```bash
+curl -X DELETE http://127.0.0.1:5000/path-to-file-or-folder
+```
+
+### Create a directory
+
+Use the `MKCOL` method (from WebDAV) to create a directory:
+
+```bash
+curl -X MKCOL http://127.0.0.1:5000/path-to-folder
+```
+
+### Move a file or folder
+
+Use the `MOVE` method and supply the destination in a header:
+
+```bash
+curl -X MOVE http://127.0.0.1:5000/path -H "Destination: http://127.0.0.1:5000/new-path"
+```
+
+### List and search directory contents
+
+<CodeGroup>
+
+```bash Search by filename
+curl http://127.0.0.1:5000?q=Dockerfile
+```
+
+```bash Names only (like ls -1)
+curl http://127.0.0.1:5000?simple
+```
+
+```bash JSON output
+curl http://127.0.0.1:5000?json
+```
+
+</CodeGroup>
+
+### Authenticate with curl
+
+Both HTTP Basic and Digest authentication are supported:
+
+<CodeGroup>
+
+```bash Basic auth
+curl http://127.0.0.1:5000/file --user user:pass
+```
+
+```bash Digest auth
+curl http://127.0.0.1:5000/file --user user:pass --digest
+```
+
+</CodeGroup>
+
+### Resumable downloads
+
+Use `-C-` to resume an interrupted download:
+
+```bash
+curl -C- -o file http://127.0.0.1:5000/file
+```
+
+### Resumable uploads
+
+To resume an upload, first retrieve the current file size from the server, then send the remaining bytes using `PATCH` with the `X-Update-Range: append` header:
+
+```bash
+upload_offset=$(curl -I -s http://127.0.0.1:5000/file | tr -d '\r' | sed -n 's/content-length: //p')
+dd skip=$upload_offset if=file status=none ibs=1 | \
+  curl -X PATCH -H "X-Update-Range: append" --data-binary @- http://127.0.0.1:5000/file
+```
+
+### Health check
+
+```bash
+curl http://127.0.0.1:5000/__dufs__/health
+```
+
+Returns a 200 response when Dufs is running and ready to serve requests.

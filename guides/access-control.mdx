@@ -1,0 +1,175 @@
+---
+title: 'Access control'
+description: 'Restrict who can read and write files using account-based auth rules, hashed passwords, and token download links.'
+---
+
+Dufs supports account-based access control through the `--auth` / `-a` flag. You can define which users can access which paths, and at what permission level.
+
+## Rule syntax
+
+Each auth rule follows this pattern:
+
+```
+user:pass@/path:perm,/path2:perm
+```
+
+The `@` separates the account (left) from the paths (right).
+
+<Steps>
+  <Step title="Specify the account">
+    Write `username:password` before the `@`. Omit the account entirely (just `@`) to create an anonymous access rule.
+  </Step>
+  <Step title="List the paths">
+    After the `@`, list one or more paths separated by commas. Each path is relative to the served root.
+  </Step>
+  <Step title="Set permissions per path">
+    Append `:rw` for read-write or `:ro` for read-only. The `:ro` suffix (and its equivalent, no suffix) grants read-only access.
+  </Step>
+</Steps>
+
+## Permission levels
+
+| Suffix | Permission  | Description                                   |
+| ------ | ----------- | --------------------------------------------- |
+| `:rw`  | Read-write  | View, download, upload, delete, move, search  |
+| `:ro`  | Read-only   | View and download only                        |
+| _(none)_ | Read-only | Same as `:ro`                                 |
+
+## Examples
+
+### Single admin user with full access
+
+```sh
+dufs -a admin:admin@/:rw
+```
+
+`admin` has read-write access to all paths.
+
+### Admin and guest with different permissions
+
+```sh
+dufs -a admin:admin@/:rw -a guest:guest@/
+```
+
+`admin` has read-write access; `guest` has read-only access everywhere.
+
+### User with mixed per-path permissions
+
+```sh
+dufs -a user:pass@/:rw,/dir1
+```
+
+`user` has read-write access to `/*` but read-only access to `/dir1/*`.
+
+### Anonymous public access
+
+Use `@/` with no account to allow unauthenticated access:
+
+```sh
+dufs -a user:pass@/:rw,/dir1 -a @/
+```
+
+`@/` makes all paths publicly readable. Authenticated users still get their declared permissions.
+
+## Global permission flags act as a ceiling
+
+The `--allow-*` flags (or `-A` for all) control what operations dufs permits globally. Per-user `:rw` grants are restricted to what the server itself allows.
+
+<Warning>
+  If dufs is not started with `--allow-upload`, no user — not even one with `:rw` — will be able to upload files.
+</Warning>
+
+| Flag              | Operation unlocked                          |
+| ----------------- | ------------------------------------------- |
+| `-A` / `--allow-all` | All operations                           |
+| `--allow-upload`  | Upload files and folders                    |
+| `--allow-delete`  | Delete files and folders                    |
+| `--allow-search`  | Search files and folders                    |
+| `--allow-symlink` | Follow symlinks outside the root directory  |
+| `--allow-archive` | Download folders as zip archives            |
+| `--allow-hash`    | Retrieve file SHA-256 hash via `?hash`      |
+
+## Hashed passwords
+
+Dufs supports SHA-512 hashed passwords (the `$6$` format produced by `openssl passwd -6` or `mkpasswd`).
+
+**Generate a hashed password:**
+
+```sh
+openssl passwd -6 123456
+# or
+mkpasswd -m sha-512 123456
+```
+
+Example output:
+
+```
+$6$tWMB51u6Kb2ui3wd$5gVHP92V9kZcMwQeKTjyTRgySsYJu471Jb1I6iHQ8iZ6s07GgCIO69KcPBRuwPE5tDq05xMAzye0NxVKuJdYs/
+```
+
+**Use the hashed password in the auth rule:**
+
+```sh
+dufs -a 'admin:$6$tWMB51u6Kb2ui3wd$5gVHP92V9kZcMwQeKTjyTRgySsYJu471Jb1I6iHQ8iZ6s07GgCIO69KcPBRuwPE5tDq05xMAzye0NxVKuJdYs/@/:rw'
+```
+
+<Warning>
+  The hashed password string contains `$6`, which shells may expand as a variable. Always wrap the entire auth rule in **single quotes** when using hashed passwords.
+</Warning>
+
+<Note>
+  Two important constraints apply to hashed passwords:
+
+  1. Dufs only accepts SHA-512 hashes. The password string must begin with `$6$`.
+  2. Digest authentication does not work with hashed passwords. Use basic auth instead when hashed passwords are in use.
+</Note>
+
+## Token-based download links
+
+Authenticated users can generate a time-limited download token for a specific file by appending `?tokengen` to the file URL. The resulting `?token=` link can be shared with anyone and does not require credentials to use.
+
+```sh
+# Generate a token (requires authentication)
+curl 'http://127.0.0.1:5000/report.pdf?tokengen' --user admin:admin
+
+# Download using the token (no credentials needed)
+curl 'http://127.0.0.1:5000/report.pdf?token=<token>'
+```
+
+<Note>
+  Tokens are valid for 3 days and are scoped to the exact file path they were generated for. They only work for GET requests.
+</Note>
+
+## Auth methods
+
+Dufs supports two HTTP authentication methods:
+
+| Method  | Default | Notes                                                        |
+| ------- | ------- | ------------------------------------------------------------ |
+| Digest  | Yes     | More secure; incompatible with hashed passwords              |
+| Basic   | No      | Required when using hashed passwords; use with HTTPS         |
+
+When hashed passwords are configured, dufs automatically falls back to basic auth only. With plain-text passwords, dufs advertises both digest and basic auth, and clients may use either.
+
+<Tip>
+  When using basic auth over an unencrypted connection, credentials are sent as base64-encoded plaintext. Enable HTTPS with `--tls-cert` and `--tls-key` to protect them in transit.
+</Tip>
+
+## Using environment variables
+
+You can set auth rules via the `DUFS_AUTH` environment variable. Separate multiple rules with `|`:
+
+```sh
+DUFS_AUTH="admin:admin@/:rw|@/" dufs
+```
+
+## Configuration file
+
+In a YAML config file, list auth rules as a sequence. Quote any rule that starts with `@` to satisfy YAML syntax:
+
+```yaml
+auth:
+  - admin:admin@/:rw
+  - user:pass@/src:rw,/share
+  - '@/'
+```

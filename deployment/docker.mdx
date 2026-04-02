@@ -1,0 +1,184 @@
+---
+title: "Docker"
+description: "Deploy Dufs as a Docker container using the official minimal scratch-based image."
+---
+
+The official `sigoden/dufs` image is built on a `scratch` base — it contains only the statically-linked Dufs binary with no OS layer, making it minimal and secure.
+
+## Quick start
+
+Run Dufs with Docker, mounting your current directory and exposing port 5000:
+
+```bash
+docker run -v $(pwd):/data -p 5000:5000 --rm sigoden/dufs /data -A
+```
+
+| Part | Description |
+|---|---|
+| `-v $(pwd):/data` | Mounts the current working directory into the container at `/data` |
+| `-p 5000:5000` | Maps container port 5000 to host port 5000 |
+| `--rm` | Removes the container automatically when it stops |
+| `/data` | The path inside the container to serve |
+| `-A` | Enables all operations (upload, delete, search, archive, hash) |
+
+Open [http://localhost:5000](http://localhost:5000) in your browser to access the file server.
+
+## Environment variables
+
+Every CLI option has a corresponding `DUFS_*` environment variable. Pass them with `-e` instead of embedding flags directly in the command.
+
+```bash
+docker run \
+  -v $(pwd):/data \
+  -p 5000:5000 \
+  --rm \
+  -e DUFS_ALLOW_ALL=true \
+  -e DUFS_AUTH="admin:secret@/:rw" \
+  -e DUFS_PORT=5000 \
+  sigoden/dufs /data
+```
+
+Common environment variables:
+
+| Variable | Equivalent flag | Example value |
+|---|---|---|
+| `DUFS_SERVE_PATH` | `[serve-path]` | `/data` |
+| `DUFS_PORT` | `-p` | `5000` |
+| `DUFS_BIND` | `-b` | `0.0.0.0` |
+| `DUFS_AUTH` | `-a` | `admin:pass@/:rw` |
+| `DUFS_ALLOW_ALL` | `-A` | `true` |
+| `DUFS_ALLOW_UPLOAD` | `--allow-upload` | `true` |
+| `DUFS_ALLOW_DELETE` | `--allow-delete` | `true` |
+| `DUFS_TLS_CERT` | `--tls-cert` | `/certs/cert.pem` |
+| `DUFS_TLS_KEY` | `--tls-key` | `/certs/key.pem` |
+
+<Tip>
+  Use environment variables when orchestrating containers with Docker Compose or Kubernetes — they keep your commands clean and your secrets out of shell history.
+</Tip>
+
+## Docker Compose
+
+Create a `compose.yaml` file for a persistent, restartable deployment:
+
+```yaml compose.yaml
+services:
+  dufs:
+    image: sigoden/dufs
+    container_name: dufs
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data:/data
+    command: /data -A
+    environment:
+      - DUFS_AUTH=admin:secret@/:rw
+```
+
+Start it with:
+
+```bash
+docker compose up -d
+```
+
+Stop it with:
+
+```bash
+docker compose down
+```
+
+### Compose with TLS
+
+Mount your certificate and key files into the container and point Dufs to them:
+
+```yaml compose.yaml
+services:
+  dufs:
+    image: sigoden/dufs
+    container_name: dufs
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data:/data
+      - ./certs:/certs:ro
+    environment:
+      - DUFS_TLS_CERT=/certs/cert.pem
+      - DUFS_TLS_KEY=/certs/key.pem
+      - DUFS_AUTH=admin:secret@/:rw
+      - DUFS_ALLOW_ALL=true
+    command: /data
+```
+
+<Note>
+  Mount your cert directory as read-only (`:ro`) so the container cannot modify your certificate files.
+</Note>
+
+## Running with TLS
+
+To enable HTTPS, mount your certificate and key files into the container and pass their paths to Dufs:
+
+```bash
+docker run \
+  -v $(pwd):/data \
+  -v $(pwd)/certs:/certs:ro \
+  -p 5000:5000 \
+  --rm \
+  sigoden/dufs /data \
+  --tls-cert /certs/cert.pem \
+  --tls-key /certs/key.pem
+```
+
+<Warning>
+  Dufs expects the TLS key in PKCS#1 or PKCS#8 format. If you generate certificates with OpenSSL, use `openssl req -x509 -newkey rsa:4096 ...` and keep the key file in the same directory.
+</Warning>
+
+## Health check
+
+Dufs exposes a health check endpoint at `/__dufs__/health`. Use it for Docker health checks, load balancers, or uptime monitors.
+
+```bash
+curl http://localhost:5000/__dufs__/health
+```
+
+Add it to your Compose file to let Docker restart unhealthy containers automatically.
+
+<Note>
+  Because the image is based on `scratch`, standard tools like `curl` and `wget` are not available inside the container. Use Docker's external host-based health check or a sidecar container to poll the endpoint, or use an alternative orchestrator health probe that works from outside the container network.
+</Note>
+
+```yaml compose.yaml
+services:
+  dufs:
+    image: sigoden/dufs
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data:/data
+    command: /data -A
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/__dufs__/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+```
+
+For Kubernetes, use an HTTP liveness probe pointing to `/__dufs__/health` instead.
+
+## Image details
+
+The `sigoden/dufs` image is built in two stages:
+
+<Steps>
+  <Step title="Build stage">
+    The Rust source is compiled to a statically-linked musl binary for `amd64` and `arm64` targets using `messense/rust-musl-cross`.
+  </Step>
+  <Step title="Final image">
+    Only the compiled `/bin/dufs` binary is copied into a `scratch` base image. There is no shell, no package manager, and no OS — just the binary.
+  </Step>
+</Steps>
+
+This produces a very small, attack-surface-minimal image. The `STOPSIGNAL SIGINT` instruction ensures the container shuts down cleanly when stopped.
+
+The release image (`Dockerfile-release`) follows the same pattern but downloads pre-built binaries from GitHub Releases, supporting `linux/amd64`, `linux/arm64`, `linux/386`, and `linux/arm/v7`.

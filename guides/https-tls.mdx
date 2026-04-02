@@ -1,0 +1,67 @@
+---
+title: 'HTTPS / TLS'
+description: 'Serve dufs over HTTPS by providing a TLS certificate and private key.'
+---
+
+Dufs can serve traffic over HTTPS when you supply a TLS certificate and its matching private key. Both flags must be provided together — specifying only one will cause dufs to exit with an error.
+
+## Flags
+
+| Flag          | Env var          | Description                              |
+| ------------- | ---------------- | ---------------------------------------- |
+| `--tls-cert`  | `DUFS_TLS_CERT`  | Path to the SSL/TLS certificate file     |
+| `--tls-key`   | `DUFS_TLS_KEY`   | Path to the certificate's private key    |
+
+## Enabling HTTPS
+
+```sh
+dufs --tls-cert my.crt --tls-key my.key
+```
+
+Or using environment variables:
+
+```sh
+DUFS_TLS_CERT=my.crt DUFS_TLS_KEY=my.key dufs
+```
+
+<Warning>
+  You must provide **both** `--tls-cert` and `--tls-key` together. Supplying only one will result in a startup error.
+</Warning>
+
+## Generating a self-signed certificate
+
+For local testing or internal networks you can generate a self-signed certificate with OpenSSL:
+
+```sh
+openssl req -x509 -newkey rsa:4096 -keyout my.key -out my.crt \
+  -days 365 -nodes -subj '/CN=localhost'
+```
+
+Then start dufs with the generated files:
+
+```sh
+dufs --tls-cert my.crt --tls-key my.key
+```
+
+<Note>
+  Self-signed certificates will trigger browser security warnings. For production use, obtain a certificate from a trusted CA such as [Let's Encrypt](https://letsencrypt.org).
+</Note>
+
+## Configuration file
+
+```yaml
+tls-cert: path/to/cert.pem
+tls-key: path/to/key.pem
+```
+
+## Combining HTTPS with auth
+
+For maximum security, combine TLS with access control so that credentials are never sent over a plaintext connection:
+
+```sh
+dufs --tls-cert my.crt --tls-key my.key -a admin:secret@/:rw
+```
+
+<Tip>
+  Basic authentication sends credentials as base64-encoded plaintext. Always enable TLS when using basic auth with hashed passwords.
+</Tip>

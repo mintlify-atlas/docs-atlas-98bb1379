@@ -1,0 +1,113 @@
+---
+title: 'WebDAV'
+description: 'Mount dufs as a network drive on Windows, macOS, and Linux using WebDAV.'
+---
+
+Dufs has built-in WebDAV support. Any WebDAV-capable client can connect to it — no extra configuration required beyond starting the server.
+
+## Supported WebDAV methods
+
+| Method     | Operation                    |
+| ---------- | ---------------------------- |
+| `PROPFIND` | List directory contents      |
+| `MKCOL`    | Create a directory           |
+| `PUT`      | Upload a file                |
+| `COPY`     | Copy a file or folder        |
+| `MOVE`     | Move or rename a file/folder |
+| `DELETE`   | Delete a file or folder      |
+
+<Note>
+  Write operations (PUT, COPY, MOVE, DELETE, MKCOL) require the corresponding global permission flags to be enabled (`--allow-upload`, `--allow-delete`, etc.) and, if auth is configured, a user with `:rw` access.
+</Note>
+
+## Mounting on Windows
+
+Windows includes a built-in WebDAV client (the Microsoft WebDAV Mini-Redirector) accessible through **Map Network Drive**.
+
+<Steps>
+  <Step title="Open Map Network Drive">
+    In File Explorer, click **This PC** in the left panel, then select **Computer → Map network drive** from the toolbar.
+  </Step>
+  <Step title="Enter the server URL">
+    Choose a drive letter and enter the dufs server URL, for example `http://192.168.1.100:5000/`.
+  </Step>
+  <Step title="Provide credentials if required">
+    If dufs is configured with `--auth`, check **Connect using different credentials** and enter your username and password.
+  </Step>
+  <Step title="Finish">
+    Click **Finish**. The dufs directory will appear as a mapped network drive.
+  </Step>
+</Steps>
+
+<Warning>
+  The Microsoft WebDAV Mini-Redirector (user-agent `microsoft-webdav-miniredir/*`) requires a `Connection: close` response header. Dufs detects this user-agent and adds the header automatically.
+</Warning>
+
+## Mounting on macOS
+
+macOS Finder can connect to WebDAV servers directly.
+
+<Steps>
+  <Step title="Open Connect to Server">
+    In Finder, press **Cmd+K** or go to **Go → Connect to Server**.
+  </Step>
+  <Step title="Enter the server address">
+    Type the dufs URL, for example `http://192.168.1.100:5000/`, and click **Connect**.
+  </Step>
+  <Step title="Authenticate">
+    If prompted, enter your dufs username and password.
+  </Step>
+</Steps>
+
+## Mounting on Linux
+
+<Tabs>
+  <Tab title="davfs2">
+    Install `davfs2` and mount using the standard `mount` command:
+
+    ```sh
+    sudo apt install davfs2          # Debian/Ubuntu
+    sudo mount -t davfs http://192.168.1.100:5000/ /mnt/dufs
+    ```
+
+    For user-space mounting add the server entry to `/etc/fstab`:
+
+    ```
+    http://192.168.1.100:5000/ /mnt/dufs davfs user,noauto 0 0
+    ```
+  </Tab>
+  <Tab title="gvfs (GNOME)">
+    GNOME Files (Nautilus) uses gvfs and supports WebDAV natively. Press **Ctrl+L** in Nautilus, then enter:
+
+    ```
+    dav://192.168.1.100:5000/
+    ```
+
+    For HTTPS use `davs://` instead.
+  </Tab>
+</Tabs>
+
+## WebDAV with authentication
+
+All WebDAV clients support both HTTP Basic and Digest authentication. Provide credentials in the client's connection dialog, or embed them in the URL:
+
+```sh
+# curl example using digest auth
+curl --digest -u user:pass -X PROPFIND http://127.0.0.1:5000/
+```
+
+<Tip>
+  Use HTTPS (`--tls-cert` / `--tls-key`) when connecting over the internet or untrusted networks. Basic auth credentials are transmitted in plaintext without TLS.
+</Tip>
+
+## Compatible clients
+
+The following clients have been tested or are known to work with dufs over WebDAV:
+
+- **Windows Explorer** (built-in WebDAV Mini-Redirector)
+- **macOS Finder** (built-in WebDAV support)
+- **Cyberduck** — cross-platform GUI client
+- **WinSCP** — Windows GUI client with WebDAV support
+- **Nautilus / GNOME Files** — via gvfs
+- **curl** — command-line (`-X PROPFIND`, `-T`, `-X MOVE`, etc.)
+- **rclone** — sync tool with WebDAV backend

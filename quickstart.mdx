@@ -1,80 +1,167 @@
 ---
 title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+description: "Serve your first directory in under a minute, then layer on uploads, access control, and curl-based file management."
 ---
 
-## Get started in three steps
+This guide takes you from a bare installation to a fully functional file server. Each step builds on the previous one.
 
-Get your documentation site running locally and make your first customization.
+<Note>Make sure Dufs is installed before you start. See the [Installation](/installation) guide if you haven't done that yet.</Note>
 
-### Step 1: Set up your local environment
+## Serve your first directory
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+<Steps>
+  <Step title="Start Dufs in the current directory">
+    ```bash
+    dufs
+    ```
 
-### Step 2: Deploy your changes
+    Dufs starts in read-only mode by default. Visitors can browse and download files, but cannot upload or delete anything.
+  </Step>
+  <Step title="Open the web interface">
+    Navigate to [http://localhost:5000](http://localhost:5000) in your browser. You'll see a directory listing for the folder you started Dufs in.
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    <Tip>Dufs binds to `0.0.0.0:5000` by default, so it's reachable from other devices on your local network as well.</Tip>
+  </Step>
+</Steps>
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+## Enable all operations
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+To allow uploading, deleting, searching, archiving, and hashing, pass the `-A` flag:
 
-### Step 3: Go live
+```bash
+dufs -A
+```
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+If you only need specific operations, use the individual flags instead:
+
+```bash
+dufs --allow-upload --allow-delete
+```
+
+## Serve a specific path
+
+Pass a directory or file path as the first argument:
+
+```bash
+dufs Downloads
+```
+
+To serve a single file:
+
+```bash
+dufs linux-distro.iso
+```
+
+## Add a password
+
+Use `-a` to require authentication. The format is `user:pass@path:permission`:
+
+```bash
+dufs -a admin:123@/:rw
+```
+
+This makes `admin` with password `123` the only user who can read or write anything under `/`. Anonymous access is blocked entirely.
+
+To allow public read-only access while restricting writes to authenticated users:
+
+```bash
+dufs -a admin:admin@/:rw -a guest:guest@/
+```
+
+<Note>Auth permissions are capped by the global permission flags. If `--allow-upload` is not set, no user — even one with `:rw` — can upload files.</Note>
+
+## Use curl to upload and download files
+
+Dufs has a full HTTP API that works with standard `curl` commands.
+
+<Steps>
+  <Step title="Start Dufs with uploads enabled">
+    ```bash
+    dufs -A
+    ```
+  </Step>
+  <Step title="Upload a file">
+    ```sh
+    curl -T path-to-file http://127.0.0.1:5000/new-path/path-to-file
+    ```
+
+    The `-T` flag sends the file using an HTTP `PUT` request. Dufs creates any missing directories in the path automatically.
+  </Step>
+  <Step title="Download a file">
+    ```sh
+    curl http://127.0.0.1:5000/path-to-file
+    ```
+
+    To download a whole folder as a zip archive:
+
+    ```sh
+    curl -o path-to-folder.zip http://127.0.0.1:5000/path-to-folder?zip
+    ```
+  </Step>
+  <Step title="Resumable downloads">
+    ```sh
+    curl -C- -o file http://127.0.0.1:5000/file
+    ```
+
+    The `-C-` flag tells curl to resume an interrupted download automatically using HTTP range requests.
+  </Step>
+</Steps>
+
+<Tip>Both HTTP Basic and Digest auth are supported. Pass credentials with `--user user:pass` or `--user user:pass --digest`.</Tip>
+
+## Health check
+
+Use the built-in health endpoint to verify the server is running — useful in scripts, Docker health checks, and CI pipelines:
+
+```sh
+curl http://127.0.0.1:5000/__dufs__/health
+```
+
+A `200 OK` response confirms the server is up.
+
+## Common one-liners
+
+<CodeGroup>
+
+```bash Serve current directory (read-only)
+dufs
+```
+
+```bash Enable all operations
+dufs -A
+```
+
+```bash Serve a specific directory
+dufs Downloads
+```
+
+```bash Require a username and password
+dufs -a admin:123@/:rw
+```
+
+```bash Listen on a custom host and port
+dufs -b 127.0.0.1 -p 8080
+```
+
+```bash Serve over HTTPS
+dufs --tls-cert my.crt --tls-key my.key
+```
+
+</CodeGroup>
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
-
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="CLI options" icon="terminal" href="/configuration/cli-options">
+    Full reference for every flag and option.
+  </Card>
+  <Card title="Access control" icon="lock" href="/guides/access-control">
+    Set up per-path read/write rules and hashed passwords.
+  </Card>
+  <Card title="HTTP API" icon="code" href="/api/overview">
+    Upload, delete, move, and search files with curl.
+  </Card>
+  <Card title="Docker deployment" icon="docker" href="/deployment/docker">
+    Run Dufs as a container with Docker or Docker Compose.
+  </Card>
 </CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>

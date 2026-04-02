@@ -1,0 +1,201 @@
+---
+title: 'Directories'
+description: 'List, create, archive, and move directories over HTTP.'
+---
+
+## List directory contents
+
+```
+GET /<path>/
+```
+
+Returns the directory listing. The trailing slash is required to address a directory. The default response is an HTML page rendered in the browser. Use query parameters to change the output format.
+
+### Plain text listing
+
+```
+GET /<path>?simple
+```
+
+Returns a newline-delimited list of entry names — one per line, with a trailing `/` for subdirectories. Similar to `ls -1`.
+
+<ParamField query="simple" type="flag">
+  No value required. Returns plain text instead of HTML.
+</ParamField>
+
+```bash
+curl http://127.0.0.1:5000?simple
+```
+
+Example output:
+
+```text
+documents/
+images/
+notes.txt
+README.md
+```
+
+### JSON listing
+
+```
+GET /<path>?json
+```
+
+Returns the directory contents as a JSON object. Useful for programmatic access.
+
+<ParamField query="json" type="flag">
+  No value required. Returns `application/json` instead of HTML.
+</ParamField>
+
+```bash
+curl http://127.0.0.1:5000?json
+```
+
+The response is a JSON object with a `paths` array. Each entry in `paths` has the following fields:
+
+<ResponseField name="path_type" type="string" required>
+  Entry type. One of `Dir`, `SymlinkDir`, `File`, or `SymlinkFile`.
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Path of the entry relative to the served root, using `/` as the separator (e.g. `documents/report.pdf`).
+</ResponseField>
+
+<ResponseField name="mtime" type="number" required>
+  Last-modified timestamp in milliseconds since the Unix epoch.
+</ResponseField>
+
+<ResponseField name="size" type="number" required>
+  For files: size in bytes. For directories: number of direct children (capped at 1000).
+</ResponseField>
+
+Example response:
+
+```json
+{
+  "href": "/",
+  "kind": "Index",
+  "uri_prefix": "/",
+  "allow_upload": true,
+  "allow_delete": true,
+  "allow_search": true,
+  "allow_archive": true,
+  "dir_exists": true,
+  "auth": false,
+  "user": null,
+  "paths": [
+    {
+      "path_type": "Dir",
+      "name": "documents",
+      "mtime": 1700000000000,
+      "size": 3
+    },
+    {
+      "path_type": "File",
+      "name": "README.md",
+      "mtime": 1699990000000,
+      "size": 1024
+    }
+  ]
+}
+```
+
+### Sorting
+
+Append `?sort=<field>` and optionally `?order=desc` to control sort order. Supported `sort` values: `name`, `mtime`, `size`. Directories always appear before files.
+
+```bash
+curl "http://127.0.0.1:5000?json&sort=mtime&order=desc"
+```
+
+---
+
+## Create a directory
+
+```
+MKCOL /<path>
+```
+
+Creates a directory (and any missing parent directories) at the specified path.
+
+<Warning>
+  Requires `--allow-upload` (or `-A`).
+</Warning>
+
+```bash
+curl -X MKCOL http://127.0.0.1:5000/path-to-folder
+```
+
+**Response codes:**
+- `201 Created` — directory created.
+- `405 Method Not Allowed` — a file or directory already exists at that path.
+- `403 Forbidden` — upload not permitted.
+
+---
+
+## Download a directory as zip
+
+```
+GET /<path>?zip
+```
+
+Streams the directory as a zip archive. The `Content-Disposition` header suggests a filename of `<directory-name>.zip`.
+
+<ParamField query="zip" type="flag">
+  No value required. Triggers zip archive generation.
+</ParamField>
+
+<Warning>
+  Requires `--allow-archive` (or `-A`). The compression level is controlled by `--compress` (`none`, `low`, `medium`, `high`; default `low`).
+</Warning>
+
+```bash
+curl -o path-to-folder.zip http://127.0.0.1:5000/path-to-folder?zip
+```
+
+---
+
+## Delete a directory
+
+```
+DELETE /<path>
+```
+
+Recursively deletes the directory and all its contents.
+
+<Warning>
+  Requires `--allow-delete` (or `-A`). This operation is irreversible.
+</Warning>
+
+```bash
+curl -X DELETE http://127.0.0.1:5000/path-to-folder
+```
+
+**Response codes:**
+- `204 No Content` — directory deleted.
+- `403 Forbidden` — delete not permitted.
+- `404 Not Found` — directory does not exist.
+
+---
+
+## Move a directory
+
+```
+MOVE /<path>
+```
+
+Moves or renames a directory by specifying the destination in the `Destination` header. The operation is recursive.
+
+<ParamField header="Destination" type="string" required>
+  The full URL of the destination path, e.g. `http://127.0.0.1:5000/new-folder-name`.
+</ParamField>
+
+<Warning>
+  Requires both `--allow-upload` and `--allow-delete` (or `-A`).
+</Warning>
+
+```bash
+curl -X MOVE http://127.0.0.1:5000/old-folder \
+  -H "Destination: http://127.0.0.1:5000/new-folder"
+```

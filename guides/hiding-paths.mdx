@@ -1,0 +1,87 @@
+---
+title: 'Hiding paths'
+description: 'Exclude files and folders from directory listings using glob patterns with --hidden.'
+---
+
+The `--hidden` flag lets you hide files and directories from the directory listing without deleting them. Hidden paths are not shown in the UI or API responses, but they remain accessible by direct URL if the client knows the path.
+
+## Flag
+
+```
+--hidden <value>
+```
+
+Env var: `DUFS_HIDDEN`
+
+## Glob pattern syntax
+
+The value is one or more glob patterns. Supported wildcards:
+
+| Pattern | Matches                                      |
+| ------- | -------------------------------------------- |
+| `*`     | Any sequence of characters within a name     |
+| `?`     | Any single character                         |
+| `[abc]` | Any one of the listed characters             |
+
+<Warning>
+  Globs match **file and directory names only**, not full paths. The pattern `dir1/file` is invalid and will not work as expected. Use `file` to match by name regardless of location.
+</Warning>
+
+## Multiple patterns
+
+Provide multiple patterns as a comma-separated list or by repeating the flag:
+
+```sh
+# Comma-separated
+dufs --hidden '*.log,*.lock'
+
+# Repeated flag
+dufs --hidden '*.log' --hidden '*.lock'
+```
+
+Both forms are equivalent.
+
+## Examples
+
+Hide dotfiles (files and folders starting with `.`):
+
+```sh
+dufs --hidden '.*'
+```
+
+Hide all folders (names ending with `/`):
+
+```sh
+dufs --hidden '*/'
+```
+
+Hide files by extension:
+
+```sh
+dufs --hidden '*.log,*.lock'
+```
+
+Hide specific names:
+
+```sh
+dufs --hidden .git,.DS_Store,tmp
+```
+
+## Environment variable
+
+Provide a comma-separated list:
+
+```sh
+DUFS_HIDDEN=tmp,*.log,*.lock dufs
+```
+
+## Configuration file
+
+List patterns as a YAML sequence:
+
+```yaml
+hidden:
+  - tmp
+  - '*.log'
+  - '*.lock'
+```

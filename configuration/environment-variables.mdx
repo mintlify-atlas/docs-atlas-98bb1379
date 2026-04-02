@@ -1,0 +1,110 @@
+---
+title: "Environment variables"
+description: "Configure Dufs using environment variables — useful for Docker, containers, and CI/CD."
+---
+
+Every CLI option has a corresponding environment variable prefixed with `DUFS_`. Environment variables follow the same precedence as CLI flags: they override config file values but are overridden by CLI flags passed at runtime.
+
+```
+CLI flags  >  environment variables  >  config file  >  built-in defaults
+```
+
+<Note>
+  Boolean flags (like `DUFS_ALLOW_ALL`) are enabled by setting the variable to `true`. Any other value, or an unset variable, leaves the flag disabled.
+</Note>
+
+---
+
+## Full reference
+
+| Environment variable | Corresponding flag | Example value |
+| --- | --- | --- |
+| `DUFS_SERVE_PATH` | `[serve-path]` | `/data` |
+| `DUFS_CONFIG` | `-c, --config` | `config.yaml` |
+| `DUFS_BIND` | `-b, --bind` | `0.0.0.0` |
+| `DUFS_PORT` | `-p, --port` | `5000` |
+| `DUFS_PATH_PREFIX` | `--path-prefix` | `/dufs` |
+| `DUFS_HIDDEN` | `--hidden` | `tmp,*.log,*.lock` |
+| `DUFS_AUTH` | `-a, --auth` | `admin:admin@/:rw\|@/` |
+| `DUFS_ALLOW_ALL` | `-A, --allow-all` | `true` |
+| `DUFS_ALLOW_UPLOAD` | `--allow-upload` | `true` |
+| `DUFS_ALLOW_DELETE` | `--allow-delete` | `true` |
+| `DUFS_ALLOW_SEARCH` | `--allow-search` | `true` |
+| `DUFS_ALLOW_SYMLINK` | `--allow-symlink` | `true` |
+| `DUFS_ALLOW_ARCHIVE` | `--allow-archive` | `true` |
+| `DUFS_ALLOW_HASH` | `--allow-hash` | `true` |
+| `DUFS_ENABLE_CORS` | `--enable-cors` | `true` |
+| `DUFS_RENDER_INDEX` | `--render-index` | `true` |
+| `DUFS_RENDER_TRY_INDEX` | `--render-try-index` | `true` |
+| `DUFS_RENDER_SPA` | `--render-spa` | `true` |
+| `DUFS_ASSETS` | `--assets` | `./assets` |
+| `DUFS_LOG_FORMAT` | `--log-format` | `$remote_addr "$request" $status` |
+| `DUFS_LOG_FILE` | `--log-file` | `./dufs.log` |
+| `DUFS_COMPRESS` | `--compress` | `low` |
+| `DUFS_TLS_CERT` | `--tls-cert` | `cert.pem` |
+| `DUFS_TLS_KEY` | `--tls-key` | `key.pem` |
+
+---
+
+## Multiple auth rules
+
+The `DUFS_AUTH` variable supports multiple rules separated by `|`:
+
+```bash
+DUFS_AUTH="admin:admin@/:rw|@/"
+```
+
+This is equivalent to passing `-a admin:admin@/:rw -a @/` on the command line.
+
+---
+
+## Usage in Docker
+
+Environment variables are the standard way to configure Dufs when running in a container. Pass them with `-e` or in a `docker-compose.yml` file.
+
+<Tabs>
+  <Tab title="docker run">
+    ```bash
+    docker run \
+      -v "$(pwd)":/data \
+      -p 5000:5000 \
+      -e DUFS_ALLOW_UPLOAD=true \
+      -e DUFS_ALLOW_DELETE=true \
+      --rm sigoden/dufs /data
+    ```
+  </Tab>
+  <Tab title="docker-compose.yml">
+    ```yaml docker-compose.yml
+    services:
+      dufs:
+        image: sigoden/dufs
+        ports:
+          - "5000:5000"
+        volumes:
+          - ./data:/data
+        environment:
+          DUFS_ALLOW_ALL: "true"
+          DUFS_PORT: "5000"
+          DUFS_LOG_FORMAT: '$remote_addr "$request" $status'
+        command: /data
+    ```
+  </Tab>
+</Tabs>
+
+---
+
+## Usage in a shell
+
+Set environment variables in your shell before running Dufs, or prefix them inline:
+
+```bash
+# Inline
+DUFS_PORT=8080 DUFS_ALLOW_UPLOAD=true dufs /data
+
+# Export before running
+export DUFS_PORT=8080
+export DUFS_ALLOW_ALL=true
+dufs /data
+```
+
+To persist settings across sessions, add the `export` statements to your shell profile (e.g., `~/.bashrc` or `~/.zshrc`).

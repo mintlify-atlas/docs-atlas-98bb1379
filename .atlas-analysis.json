@@ -1,0 +1,116 @@
+{
+  "projectType": "cli-tool",
+  "projectName": "Dufs",
+  "projectDescription": "A distinctive utility file server written in Rust that supports static serving, file upload/download, searching, access control, WebDAV, and HTTPS.",
+  "theme": "palm",
+  "primaryColor": "#94cb04",
+  "lightColor": "#545454",
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/cli-options",
+              "configuration/config-file",
+              "configuration/environment-variables"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/access-control",
+              "guides/https-tls",
+              "guides/webdav",
+              "guides/serving-modes",
+              "guides/hiding-paths",
+              "guides/logging",
+              "guides/customize-ui"
+            ]
+          },
+          {
+            "group": "Deployment",
+            "pages": [
+              "deployment/docker",
+              "deployment/examples"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "HTTP API",
+            "pages": [
+              "api/overview",
+              "api/files",
+              "api/directories",
+              "api/search",
+              "api/health"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Static file serving with directory listings",
+    "File and folder upload via browser drag & drop or curl PUT",
+    "Resumable uploads and downloads with range support",
+    "Access control with per-path read/write permissions",
+    "WebDAV protocol support for native OS integration",
+    "HTTPS/TLS support",
+    "File search across directory trees",
+    "Folder download as zip archive",
+    "Inline file editor for text files",
+    "Customizable web UI via external assets directory",
+    "Docker support with minimal scratch image"
+  ],
+  "publicApiSurface": [
+    "dufs [OPTIONS] [serve-path]",
+    "--bind / -b <addrs>",
+    "--port / -p <port>",
+    "--auth / -a <rules>",
+    "--allow-all / -A",
+    "--allow-upload",
+    "--allow-delete",
+    "--allow-search",
+    "--allow-symlink",
+    "--allow-archive",
+    "--allow-hash",
+    "--enable-cors",
+    "--tls-cert / --tls-key",
+    "--render-index",
+    "--render-try-index",
+    "--render-spa",
+    "--hidden <glob>",
+    "--path-prefix <path>",
+    "--assets <path>",
+    "--log-format <format>",
+    "--log-file <file>",
+    "--compress <level>",
+    "--config / -c <file>",
+    "GET /<path> — download file or list directory",
+    "PUT /<path> — upload file",
+    "PATCH /<path> — resumable/partial upload",
+    "DELETE /<path> — delete file or directory",
+    "MKCOL /<path> — create directory",
+    "MOVE /<path> — move/rename file or directory",
+    "GET /?q=<query> — search files",
+    "GET /?zip — download directory as zip",
+    "GET /?hash — get SHA-256 hash of file",
+    "GET /__dufs__/health — health check endpoint"
+  ]
+}

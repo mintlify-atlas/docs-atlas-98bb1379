@@ -1,0 +1,76 @@
+---
+title: 'Customize the UI'
+description: 'Replace the built-in web interface with your own HTML, CSS, and JavaScript assets using --assets.'
+---
+
+Dufs lets you replace its built-in web interface with your own assets directory. This is useful when you want to change the look and feel, add branding, or embed dufs into a larger application.
+
+## The `--assets` flag
+
+```sh
+dufs --assets my-assets-dir/
+```
+
+Env var: `DUFS_ASSETS`
+
+Dufs will serve your `index.html` in place of the built-in interface. All other files in the directory are served as static assets.
+
+## Requirements
+
+Your assets folder **must contain an `index.html` file**. Dufs will refuse to start if `index.html` is missing:
+
+```
+Error: Path `my-assets-dir` doesn't contain index.html
+```
+
+## Template variables
+
+Your `index.html` can reference two special placeholder strings that dufs replaces at runtime:
+
+| Placeholder        | Value injected by dufs                          |
+| ------------------ | ----------------------------------------------- |
+| `__INDEX_DATA__`   | JSON directory listing data for the current path |
+| `__ASSETS_PREFIX__` | URL prefix for your static assets              |
+
+Use `__ASSETS_PREFIX__` when referencing local assets so that links remain correct under a `--path-prefix`:
+
+```html
+<link rel="stylesheet" href="__ASSETS_PREFIX__index.css">
+<script src="__ASSETS_PREFIX__index.js"></script>
+```
+
+The directory data is embedded in a `<template>` element so it is not rendered directly:
+
+```html
+<template id="index-data">__INDEX_DATA__</template>
+```
+
+Your JavaScript can then read and parse it:
+
+```js
+const raw = document.getElementById('index-data').innerHTML;
+const data = JSON.parse(raw);
+```
+
+## Starting from the built-in assets
+
+If you only need minor adjustments, copy the official assets from the dufs repository and modify them:
+
+```sh
+# Clone the repo to access the assets
+git clone https://github.com/sigoden/dufs.git
+cp -r dufs/assets my-assets-dir/
+
+# Make your changes, then start dufs
+dufs --assets my-assets-dir/
+```
+
+<Tip>
+  The built-in UI uses plain HTML, CSS, and JavaScript — no build tools or frameworks required. Basic web development knowledge is enough to make modifications.
+</Tip>
+
+## Configuration file
+
+```yaml
+assets: ./my-assets-dir/
+```

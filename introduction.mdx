@@ -1,0 +1,87 @@
+---
+title: "Introduction"
+description: "Dufs is a distinctive utility file server that supports static serving, uploading, searching, access control, WebDAV, and more."
+---
+
+Dufs is a lightweight, single-binary file server written in Rust. It lets you share files and folders over HTTP instantly — from your terminal — with no configuration required. When you need more, it grows with you: add access control, HTTPS, WebDAV support, and fine-grained permissions via simple flags or a YAML config file.
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Install Dufs via cargo, Homebrew, Docker, or binary download
+  </Card>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Serve your first directory in under a minute
+  </Card>
+  <Card title="CLI Options" icon="terminal" href="/configuration/cli-options">
+    Full reference for every flag and option
+  </Card>
+  <Card title="HTTP API" icon="code" href="/api/overview">
+    Use curl or any HTTP client to manage files programmatically
+  </Card>
+</CardGroup>
+
+## Why Dufs?
+
+Dufs is designed for developers and sysadmins who need a quick, reliable file server without the overhead of a full-blown solution.
+
+<CardGroup cols={2}>
+  <Card title="Zero config to start" icon="play">
+    Run `dufs` in any directory — it works immediately with sensible defaults.
+  </Card>
+  <Card title="Granular access control" icon="lock">
+    Define per-path read/write permissions for multiple users, including anonymous access.
+  </Card>
+  <Card title="WebDAV support" icon="folder-open">
+    Mount Dufs as a network drive on Windows, macOS, and Linux.
+  </Card>
+  <Card title="Resumable transfers" icon="arrow-rotate-right">
+    Supports HTTP range requests for reliable large-file uploads and downloads.
+  </Card>
+  <Card title="File operations via curl" icon="terminal">
+    Upload, download, delete, move, and search files with standard HTTP methods.
+  </Card>
+  <Card title="HTTPS ready" icon="shield">
+    Serve over TLS with your own certificate — one flag, no extra tools.
+  </Card>
+</CardGroup>
+
+## Key features
+
+- **Static file serving** — serve a directory, a single file, or a full static website
+- **Drag & drop uploads** — upload files and folders directly in the browser
+- **Resumable uploads and downloads** — range-request support for large files
+- **Access control** — per-path read-only/read-write rules with optional authentication
+- **WebDAV** — compatible with Windows Explorer, macOS Finder, and WebDAV clients
+- **File search** — find files across the served directory tree
+- **Folder archives** — download any folder as a zip file
+- **Inline editor** — edit text files directly in the browser
+- **HTTPS/TLS** — bring your own certificate for encrypted serving
+- **Custom UI** — override the built-in web interface with your own assets
+- **Docker-ready** — minimal scratch-based Docker image
+
+## Get started
+
+<Steps>
+  <Step title="Install Dufs">
+    Pick your preferred installation method — cargo, Homebrew, Docker, or a pre-built binary.
+    [See installation guide →](/installation)
+  </Step>
+  <Step title="Serve your first directory">
+    ```bash
+    dufs
+    ```
+    Open [http://localhost:5000](http://localhost:5000) in your browser.
+  </Step>
+  <Step title="Enable uploads and other operations">
+    ```bash
+    dufs -A
+    ```
+    The `-A` flag enables all operations: upload, delete, search, archive, and hash.
+  </Step>
+  <Step title="Add access control">
+    ```bash
+    dufs -a admin:secret@/:rw -a @/public
+    ```
+    Require login for write access while keeping `/public` readable by everyone.
+  </Step>
+</Steps>

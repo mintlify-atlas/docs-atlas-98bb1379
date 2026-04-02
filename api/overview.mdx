@@ -1,0 +1,81 @@
+---
+title: 'HTTP API overview'
+description: 'Use standard HTTP methods to interact with dufs programmatically — no SDK required.'
+---
+
+Dufs exposes a plain HTTP API. Every operation is a standard HTTP method (`GET`, `PUT`, `PATCH`, `DELETE`, `MKCOL`, `MOVE`) against a URL path that mirrors the file system. Any HTTP client — curl, wget, a browser, a script — works out of the box.
+
+## Base URL
+
+```
+http://localhost:5000
+```
+
+The host and port are controlled by the `-b` / `--bind` and `-p` / `--port` flags. If you configure a path prefix with `--path-prefix`, prepend it to every path in these docs.
+
+## Authentication
+
+Dufs supports HTTP Basic auth and HTTP Digest auth. Pass credentials with any request using the `--user` flag in curl:
+
+```bash
+# Basic auth
+curl http://127.0.0.1:5000/file --user user:pass
+
+# Digest auth
+curl http://127.0.0.1:5000/file --user user:pass --digest
+```
+
+<Note>
+  Authentication is only required when the server is started with `-a` / `--auth` rules. Without auth rules, all operations allowed by the global permission flags are publicly accessible.
+</Note>
+
+### Token auth
+
+Authenticated users can generate a time-limited download token for a specific path. Append `?token=<token>` to a `GET` request to download without providing credentials. Tokens are scoped to a single path and expire after 3 days.
+
+## CORS
+
+Cross-origin requests are blocked by default. Start dufs with `--enable-cors` to add the following headers to every response:
+
+```
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: *
+Access-Control-Allow-Headers: Authorization,*
+Access-Control-Expose-Headers: Authorization,*
+```
+
+## Response codes
+
+| Code | Meaning |
+|------|---------|
+| `200 OK` | Request succeeded. |
+| `201 Created` | Resource was created (upload, MKCOL). |
+| `204 No Content` | Operation succeeded, no body returned (delete, move, partial upload). |
+| `206 Partial Content` | Range request succeeded. |
+| `304 Not Modified` | Conditional GET: resource unchanged. |
+| `401 Unauthorized` | Credentials required or invalid. |
+| `403 Forbidden` | Authenticated, but the operation is not permitted on this path. |
+| `404 Not Found` | Path does not exist. |
+| `405 Method Not Allowed` | Operation not valid for this resource (e.g. MKCOL on an existing path). |
+| `500 Internal Server Error` | Server-side error. |
+
+## Content types
+
+Dufs detects the MIME type of each file using its extension and sets `Content-Type` accordingly on download responses. Directory listing responses use `text/html` (default), `text/plain` (`?simple`), or `application/json` (`?json`).
+
+## Pages in this section
+
+<CardGroup cols={2}>
+  <Card title="Files" icon="file" href="/api/files">
+    Download, upload, resumable upload, delete, and move files.
+  </Card>
+  <Card title="Directories" icon="folder" href="/api/directories">
+    List, create, archive, and move directories.
+  </Card>
+  <Card title="Search" icon="magnifying-glass" href="/api/search">
+    Search for files by name across the served directory.
+  </Card>
+  <Card title="Health" icon="heart-pulse" href="/api/health">
+    Health check endpoint for containers and load balancers.
+  </Card>
+</CardGroup>

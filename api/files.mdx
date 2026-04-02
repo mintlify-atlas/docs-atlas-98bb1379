@@ -1,0 +1,216 @@
+---
+title: 'Files'
+description: 'Download, upload, partially upload, delete, and move files over HTTP.'
+---
+
+## Download a file
+
+```
+GET /<path>
+```
+
+Returns the file content with an appropriate `Content-Type` header. The response includes `Accept-Ranges: bytes` so clients can request partial content.
+
+```bash
+curl http://127.0.0.1:5000/path-to-file
+```
+
+### Partial download (range request)
+
+Send a `Range` header to retrieve a byte range. The server responds with `206 Partial Content`.
+
+```bash
+# Resume an interrupted download
+curl -C- -o file http://127.0.0.1:5000/file
+```
+
+### Get file metadata
+
+```
+HEAD /<path>
+```
+
+Returns the same headers as `GET` (including `Content-Length`, `Content-Type`, `Last-Modified`, `ETag`) without the body. Useful for checking file size before a resumable upload.
+
+```bash
+curl -I http://127.0.0.1:5000/path-to-file
+```
+
+### View or edit a file in the browser
+
+```
+GET /<path>?view
+GET /<path>?edit
+```
+
+Returns the built-in browser-based text viewer (`?view`) or editor (`?edit`) UI for the file. These are HTML responses intended for use in a web browser. The editor is only active for text files up to 4 MB in size; binary files are shown as read-only.
+
+Requires `--allow-upload` for the `?edit` endpoint to save changes.
+
+---
+
+### Get SHA-256 hash
+
+```
+GET /<path>?hash
+```
+
+Returns the SHA-256 hex digest of the file as plain text.
+
+<ParamField query="hash" type="flag">
+  No value required. Triggers hash computation instead of file download.
+</ParamField>
+
+<Warning>
+  Requires `--allow-hash` (or `-A`). Returns `403 Forbidden` if the flag is not set.
+</Warning>
+
+```bash
+curl http://127.0.0.1:5000/path-to-file?hash
+```
+
+---
+
+## Upload a file
+
+```
+PUT /<path>
+```
+
+Uploads a file to the specified path. Parent directories are created automatically if they do not exist. If a file already exists at the path, uploading over it requires `--allow-delete` in addition to `--allow-upload`.
+
+<Warning>
+  Requires `--allow-upload` (or `-A`).
+</Warning>
+
+```bash
+curl -T path-to-file http://127.0.0.1:5000/new-path/path-to-file
+```
+
+**Response codes:**
+- `201 Created` — new file written.
+- `204 No Content` — existing file overwritten.
+- `403 Forbidden` — upload not permitted.
+
+---
+
+## Resumable upload
+
+```
+PATCH /<path>
+```
+
+Appends data to an existing file starting from a given byte offset. Use this to resume an interrupted upload without re-sending data already on the server.
+
+<ParamField header="X-Update-Range" type="string" required>
+  Set to `append` to write data starting at the end of the current file.
+</ParamField>
+
+<Warning>
+  Requires `--allow-upload` (or `-A`). The file must already exist on the server (create it first with `PUT`).
+</Warning>
+
+**How to resume an upload:**
+
+<Steps>
+  <Step title="Get the current file size">
+    Use `HEAD` (or `curl -I`) to read the `Content-Length` of the partial file already on the server.
+
+    ```bash
+    curl -I -s http://127.0.0.1:5000/file | tr -d '\r' | sed -n 's/content-length: //p'
+    ```
+  </Step>
+  <Step title="Skip bytes already uploaded">
+    Use `dd` to skip the bytes already transferred, then pipe the remainder to a `PATCH` request.
+
+    ```bash
+    upload_offset=$(curl -I -s http://127.0.0.1:5000/file | tr -d '\r' | sed -n 's/content-length: //p')
+    dd skip=$upload_offset if=file status=none ibs=1 | \
+      curl -X PATCH -H "X-Update-Range: append" --data-binary @- http://127.0.0.1:5000/file
+    ```
+  </Step>
+</Steps>
+
+**Response codes:**
+- `204 No Content` — data appended successfully.
+- `404 Not Found` — file does not exist yet on the server.
+- `403 Forbidden` — upload not permitted.
+
+---
+
+## Delete a file
+
+```
+DELETE /<path>
+```
+
+Permanently deletes the file at the given path.
+
+<Warning>
+  Requires `--allow-delete` (or `-A`). This operation is irreversible.
+</Warning>
+
+```bash
+curl -X DELETE http://127.0.0.1:5000/path-to-file-or-folder
+```
+
+**Response codes:**
+- `204 No Content` — file deleted.
+- `403 Forbidden` — delete not permitted.
+- `404 Not Found` — file does not exist.
+
+---
+
+## Move or rename a file
+
+```
+MOVE /<path>
+```
+
+Moves or renames a file by specifying the destination URL in the `Destination` header.
+
+<ParamField header="Destination" type="string" required>
+  The full URL of the destination path, e.g. `http://127.0.0.1:5000/new-path`.
+</ParamField>
+
+<Warning>
+  Requires both `--allow-upload` and `--allow-delete` (or `-A`).
+</Warning>
+
+```bash
+curl -X MOVE http://127.0.0.1:5000/path \
+  -H "Destination: http://127.0.0.1:5000/new-path"
+```
+
+**Response codes:**
+- `204 No Content` — file moved.
+- `403 Forbidden` — move not permitted.
+- `404 Not Found` — source file does not exist.
+
+---
+
+## Copy a file
+
+```
+COPY /<path>
+```
+
+Copies a file to the destination URL specified in the `Destination` header. Only files can be copied — directory copy is not supported.
+
+<ParamField header="Destination" type="string" required>
+  The full URL of the destination path, e.g. `http://127.0.0.1:5000/copy-of-file`.
+</ParamField>
+
+<Warning>
+  Requires `--allow-upload` (or `-A`). Copying directories returns `403 Forbidden`.
+</Warning>
+
+```bash
+curl -X COPY http://127.0.0.1:5000/original.txt \
+  -H "Destination: http://127.0.0.1:5000/copy.txt"
+```
+
+**Response codes:**
+- `204 No Content` — file copied.
+- `403 Forbidden` — upload not permitted, or source is a directory.
+- `404 Not Found` — source file does not exist.

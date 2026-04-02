@@ -1,0 +1,90 @@
+---
+title: 'Logging'
+description: 'Customize the HTTP access log format and write logs to a file with --log-format and --log-file.'
+---
+
+Dufs logs every HTTP request to stdout/stderr by default. You can customize the log line format with `--log-format` and redirect logs to a file with `--log-file`.
+
+## Default format
+
+The built-in log format is:
+
+```
+$remote_addr "$request" $status
+```
+
+A log line with this format looks like:
+
+```
+2022-08-06T06:59:31+08:00 INFO - 127.0.0.1 "GET /" 200
+```
+
+## Log variables
+
+Use these variables in your format string:
+
+| Variable        | Description                                                                 |
+| --------------- | --------------------------------------------------------------------------- |
+| `$remote_addr`  | Client IP address                                                           |
+| `$remote_user`  | Username supplied via HTTP authentication                                   |
+| `$request`      | Full request line, e.g. `GET /path/to/file`                                |
+| `$status`       | HTTP response status code                                                   |
+| `$http_*`       | Any request header. Replace `-` with `_`, e.g. `$http_user_agent`, `$http_referer` |
+
+## Examples
+
+### Log the user-agent
+
+```sh
+dufs --log-format '$remote_addr "$request" $status $http_user_agent'
+```
+
+Output:
+
+```
+2022-08-06T06:53:55+08:00 INFO - 127.0.0.1 "GET /" 200 Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36
+```
+
+### Log the authenticated username
+
+```sh
+dufs --log-format '$remote_addr $remote_user "$request" $status' -a /@admin:admin -a /folder1@user1:pass1
+```
+
+Output:
+
+```
+2022-08-06T07:04:37+08:00 INFO - 127.0.0.1 admin "GET /" 200
+```
+
+### Disable HTTP logging
+
+Pass an empty string to suppress all request logs:
+
+```sh
+dufs --log-format=''
+```
+
+## Writing logs to a file
+
+Use `--log-file` to append logs to a file instead of (or in addition to) stdout/stderr:
+
+```sh
+dufs --log-file ./dufs.log
+```
+
+Env var: `DUFS_LOG_FILE`
+
+## Environment variables
+
+| Flag              | Env var             | Example value                              |
+| ----------------- | ------------------- | ------------------------------------------ |
+| `--log-format`    | `DUFS_LOG_FORMAT`   | `'$remote_addr "$request" $status'`        |
+| `--log-file`      | `DUFS_LOG_FILE`     | `./dufs.log`                               |
+
+## Configuration file
+
+```yaml
+log-format: '$remote_addr "$request" $status $http_user_agent'
+log-file: ./dufs.log
+```

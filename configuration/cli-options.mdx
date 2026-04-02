@@ -1,0 +1,299 @@
+---
+title: "CLI options"
+description: "Complete reference for all Dufs command-line flags and options."
+---
+
+Run `dufs --help` to see all available options. The full usage signature is:
+
+```bash
+dufs [OPTIONS] [serve-path]
+```
+
+---
+
+## Positional argument
+
+<ParamField path="serve-path" type="path" default=".">
+  The directory or file to serve. Accepts any valid filesystem path. When pointing to a single file, Dufs serves that file directly.
+
+  ```bash
+  dufs /home/user/files
+  dufs linux-distro.iso
+  ```
+</ParamField>
+
+---
+
+## Network
+
+<ParamField query="-b, --bind" type="string">
+  Bind address(es) or Unix socket path(s). Accepts IP addresses (`0.0.0.0`, `127.0.0.1`, `::`) and, on Unix systems, socket file paths. Separate multiple values with commas or repeat the flag.
+
+  Default: `0.0.0.0` and `::` (all interfaces, IPv4 and IPv6).
+
+  ```bash
+  dufs -b 127.0.0.1
+  dufs -b 127.0.0.1,192.168.1.10
+  dufs -b /tmp/dufs.socket
+  ```
+</ParamField>
+
+<ParamField query="-p, --port" type="number" default="5000">
+  TCP port to listen on.
+
+  ```bash
+  dufs -p 8080
+  ```
+</ParamField>
+
+<ParamField query="--path-prefix" type="string">
+  Serve all content under a URL path prefix. Useful when Dufs sits behind a reverse proxy at a subpath.
+
+  ```bash
+  dufs --path-prefix /files
+  # Content accessible at http://host/files/
+  ```
+</ParamField>
+
+<ParamField query="--enable-cors" type="boolean">
+  Set the `Access-Control-Allow-Origin: *` response header on every request, allowing cross-origin requests from any domain.
+
+  ```bash
+  dufs --enable-cors
+  ```
+</ParamField>
+
+---
+
+## Permissions
+
+<ParamField query="-a, --auth" type="string">
+  Define access control rules. The format is `user:pass@/path:permission` where permission is `rw` (read-write) or `ro` (read-only, the default). Separate multiple paths with commas. Omit the account part (`@/path`) to define anonymous access rules. Repeat the flag to add multiple rules.
+
+  ```bash
+  # Admin has full access; guests can only read
+  dufs -a admin:admin@/:rw -a guest:guest@/
+
+  # Allow anonymous read-only access to everything
+  dufs -a @/
+
+  # User has write access to root but read-only on /dir1
+  dufs -a user:pass@/:rw,/dir1
+  ```
+
+  <Note>
+    Auth permissions are bounded by global permission flags. If `--allow-upload` is not set, no account can upload even with `:rw`.
+  </Note>
+</ParamField>
+
+<ParamField query="-A, --allow-all" type="boolean">
+  Enable all operations at once: upload, delete, search, symlink, archive, and hash. Equivalent to passing all individual `--allow-*` flags.
+
+  ```bash
+  dufs -A
+  ```
+</ParamField>
+
+<ParamField query="--allow-upload" type="boolean">
+  Allow clients to upload files and folders (including drag-and-drop).
+
+  ```bash
+  dufs --allow-upload
+  ```
+</ParamField>
+
+<ParamField query="--allow-delete" type="boolean">
+  Allow clients to delete files and folders.
+
+  ```bash
+  dufs --allow-delete
+  ```
+</ParamField>
+
+<ParamField query="--allow-search" type="boolean">
+  Allow clients to search files and folders using the `?q=` query parameter.
+
+  ```bash
+  dufs --allow-search
+  ```
+</ParamField>
+
+<ParamField query="--allow-symlink" type="boolean">
+  Allow Dufs to follow and serve symbolic links that point to locations outside the root serve directory.
+
+  ```bash
+  dufs --allow-symlink
+  ```
+</ParamField>
+
+<ParamField query="--allow-archive" type="boolean">
+  Allow clients to download entire folders as zip archives using the `?zip` query parameter.
+
+  ```bash
+  dufs --allow-archive
+  ```
+</ParamField>
+
+<ParamField query="--allow-hash" type="boolean">
+  Allow clients to retrieve the SHA-256 hash of a file using the `?hash` query parameter.
+
+  ```bash
+  dufs --allow-hash
+  ```
+</ParamField>
+
+---
+
+## Serving modes
+
+<ParamField query="--render-index" type="boolean">
+  When a directory is requested, serve `index.html` from that directory instead of the directory listing. Returns `404` if `index.html` is not found.
+
+  ```bash
+  dufs --render-index
+  ```
+</ParamField>
+
+<ParamField query="--render-try-index" type="boolean">
+  When a directory is requested, serve `index.html` if it exists, otherwise fall back to the directory listing. Combines static-site behaviour with a file browser fallback.
+
+  ```bash
+  dufs --render-try-index
+  ```
+</ParamField>
+
+<ParamField query="--render-spa" type="boolean">
+  Serve a Single Page Application (SPA). All requests that do not match a file are rewritten to `index.html`, so client-side routing works correctly.
+
+  ```bash
+  dufs --render-spa
+  ```
+</ParamField>
+
+<ParamField query="--hidden" type="string">
+  Glob pattern(s) that hide matching file and directory names from directory listings. The glob matches names only, not full paths. Separate multiple patterns with commas or repeat the flag.
+
+  ```bash
+  dufs --hidden '.*'               # hide dotfiles
+  dufs --hidden 'tmp,*.log,*.lock'
+  dufs --hidden '*.log' --hidden '*.lock'
+  ```
+
+  <Warning>
+    The glob matches file and directory **names**, not paths. `--hidden dir1/file` is not valid.
+  </Warning>
+</ParamField>
+
+<ParamField query="--assets" type="path">
+  Path to a custom assets directory that overrides the built-in UI. The directory must contain an `index.html` file.
+
+  ```bash
+  dufs --assets ./my-assets/
+  ```
+</ParamField>
+
+---
+
+## Logging
+
+<ParamField query="--log-format" type="string">
+  Custom HTTP log format string. Supports the following variables:
+
+  | Variable | Description |
+  | --- | --- |
+  | `$remote_addr` | Client IP address |
+  | `$remote_user` | Username supplied with authentication |
+  | `$request` | Full original request line |
+  | `$status` | HTTP response status code |
+  | `$http_<name>` | Any request header, e.g. `$http_user_agent` |
+
+  Default: `'$remote_addr "$request" $status'`
+
+  ```bash
+  # Disable HTTP logging
+  dufs --log-format ''
+
+  # Log with user-agent
+  dufs --log-format '$remote_addr "$request" $status $http_user_agent'
+  ```
+</ParamField>
+
+<ParamField query="--log-file" type="path">
+  Write HTTP logs to a file instead of stdout/stderr.
+
+  ```bash
+  dufs --log-file /var/log/dufs/access.log
+  ```
+</ParamField>
+
+<ParamField query="--compress" type="string" default="low">
+  Compression level used when creating zip archives for folder downloads. Higher levels produce smaller files but use more CPU.
+
+  Accepted values: `none`, `low`, `medium`, `high`
+
+  | Value | Algorithm |
+  | --- | --- |
+  | `none` | No compression (stored) |
+  | `low` | Deflate |
+  | `medium` | Bzip2 |
+  | `high` | XZ/LZMA |
+
+  ```bash
+  dufs --compress high
+  dufs --compress none
+  ```
+</ParamField>
+
+---
+
+## TLS
+
+<ParamField query="--tls-cert" type="path">
+  Path to a PEM-encoded SSL/TLS certificate file. Must be used together with `--tls-key`. When both are provided, Dufs serves over HTTPS.
+
+  ```bash
+  dufs --tls-cert /etc/ssl/certs/server.crt --tls-key /etc/ssl/private/server.key
+  ```
+</ParamField>
+
+<ParamField query="--tls-key" type="path">
+  Path to the private key file corresponding to the TLS certificate. Must be used together with `--tls-cert`.
+
+  ```bash
+  dufs --tls-cert my.crt --tls-key my.key
+  ```
+</ParamField>
+
+---
+
+## Configuration
+
+<ParamField query="-c, --config" type="path">
+  Path to a YAML configuration file. CLI flags take precedence over values set in the config file. See [Config file](/configuration/config-file) for the full file format.
+
+  ```bash
+  dufs --config /etc/dufs/config.yaml
+  dufs -c config.yaml
+  ```
+</ParamField>
+
+---
+
+## Utilities
+
+<ParamField query="--completions" type="string">
+  Print a shell completion script to stdout and exit. Redirect the output to the appropriate location for your shell.
+
+  Accepted values: `bash`, `elvish`, `fish`, `powershell`, `zsh`
+
+  ```bash
+  # Bash
+  dufs --completions bash > /etc/bash_completion.d/dufs
+
+  # Zsh
+  dufs --completions zsh > ~/.zsh/completions/_dufs
+
+  # Fish
+  dufs --completions fish > ~/.config/fish/completions/dufs.fish
+  ```
+</ParamField>

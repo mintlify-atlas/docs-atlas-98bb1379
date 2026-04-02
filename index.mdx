@@ -1,97 +1,53 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Dufs"
+description: "A distinctive utility file server that supports static serving, uploading, searching, access control, WebDAV, and more."
 ---
 
-## Setting up
+Dufs is a lightweight, single-binary file server written in Rust. Share files instantly over HTTP with no configuration required — then add access control, HTTPS, WebDAV, and more when you need it.
 
-Get your documentation site up and running in minutes.
-
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Install via cargo, Homebrew, Docker, or binary download
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Serve your first directory in under a minute
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="CLI Options" icon="terminal" href="/configuration/cli-options">
+    Full reference for every flag and option
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="HTTP API" icon="code" href="/api/overview">
+    Manage files programmatically with curl or any HTTP client
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## Key features
 
-Everything you need to create world-class documentation.
+- **Static file serving** with directory listings and drag & drop uploads
+- **Access control** — per-path read/write permissions with optional authentication
+- **WebDAV** — mount as a network drive on Windows, macOS, and Linux
+- **Resumable transfers** — HTTP range request support for large files
+- **File search** — find files recursively across the served directory
+- **HTTPS/TLS** — serve over TLS with your own certificate
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+## Get started
 
-## Need inspiration?
-
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+<Steps>
+  <Step title="Install Dufs">
+    ```bash
+    cargo install dufs
+    ```
+    [Other installation methods →](/installation)
+  </Step>
+  <Step title="Serve your directory">
+    ```bash
+    dufs
+    ```
+    Open [http://localhost:5000](http://localhost:5000) in your browser.
+  </Step>
+  <Step title="Enable all operations">
+    ```bash
+    dufs -A
+    ```
+    Allows upload, delete, search, archive, and hash operations.
+  </Step>
+</Steps>

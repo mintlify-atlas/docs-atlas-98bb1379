@@ -1,0 +1,84 @@
+---
+title: 'Search'
+description: 'Search for files by name pattern across the entire served directory tree.'
+---
+
+## Search files
+
+```
+GET /?q=<query>
+```
+
+Searches for files whose names contain the query string. The search is case-insensitive and recursive — it walks the entire directory tree starting from the served root (or the path you provide).
+
+<ParamField query="q" type="string" required>
+  The search term. Matched against file and directory names using a case-insensitive substring match, similar to `find -name *query*`.
+</ParamField>
+
+<Warning>
+  Requires `--allow-search` (or `-A`). Returns `403 Forbidden` if the flag is not set.
+</Warning>
+
+```bash
+# Search for files named "Dockerfile"
+curl http://127.0.0.1:5000?q=Dockerfile
+```
+
+The default response is an HTML directory listing showing all matches. Combine with `?simple` or `?json` to change the output format.
+
+---
+
+## Output formats
+
+### Plain text
+
+```bash
+curl "http://127.0.0.1:5000?q=*.log&simple"
+```
+
+Returns a newline-delimited list of matching entry names. Directories have a trailing `/`.
+
+### JSON
+
+```bash
+curl "http://127.0.0.1:5000?q=config&json"
+```
+
+Returns a JSON object in the same format as the [directory listing JSON response](/api/directories#json-listing). The `paths` array contains only the entries that matched the query.
+
+Example response:
+
+```json
+{
+  "href": "/",
+  "kind": "Index",
+  "paths": [
+    {
+      "path_type": "File",
+      "name": "app/config.yaml",
+      "mtime": 1700000000000,
+      "size": 512
+    },
+    {
+      "path_type": "File",
+      "name": "nginx/config.conf",
+      "mtime": 1699000000000,
+      "size": 2048
+    }
+  ]
+}
+```
+
+---
+
+## Search within a subdirectory
+
+Prefix the path to scope the search to a specific directory:
+
+```bash
+curl "http://127.0.0.1:5000/src?q=main&json"
+```
+
+<Tip>
+  Combine search with sorting by appending `&sort=mtime&order=desc` to find recently modified files matching your query.
+</Tip>
